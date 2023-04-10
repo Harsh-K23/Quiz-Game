@@ -1,0 +1,892 @@
+//This imports the required library of commands to access the common
+//utilities and the input and output commands.
+import java.util.*;
+import java.io.*;
+
+/**
+ */
+
+class FinalProject {
+    // Intializes damageMultiplier
+    public static int damageMultiplier = 1;
+    // Tracks damage dealt
+    public static int damage = 0;
+    // Tracks damage dealt to the user
+    public static int userdamage = 0;
+    // Intializes streak to determine the damage multiplier
+    public static int streak = 0;
+    // Intializes enemyHealth
+    public static int enemyHealth = 0;
+    // Intializes userHealth
+    public static int userHealth = 0;
+    // Intializes the score tracker
+    public static int score = 0;
+    //This variable keeps track of what the current questions number we are at.
+    public static int iQCount = 0;
+    // Used to display the game over outputs
+    public static boolean gameOver = false;
+    // To decide if the user is playing or not
+    public static boolean playing = false;
+    //This variable keeps track of the attempts.
+    public static int attempts = 0;
+     //answers for easy questions
+    public static int[] easyAnswers = {1,1,2,4,2,1,2,4,1,2,4,2,1,4,3,2,1,4,3,3};
+    //answers for medium questions
+    public static int[] mediumAnswers = {4,3,2,2,4,1,1,4,2,4,2,3,1,3,2,4,1,4,3,1};
+    //answers for hard questions
+    public static int[] hardAnswers = {5,3,1,2,2,4,4,3,4,3,1,3,1,2,3,1,3,2,2,3};
+    public static void main(String[] args)
+    {
+        //These next two lines will clear the terminal window in BlueJ and will
+        //also clear the execution area on Repl.it or GDB online. (Fully explained above.)
+        System.out.print("\033[H\033[2J\f");
+        System.out.flush();
+        //Title for the main program.
+        System.out.println("Welcome to my quiz game, answer the questions correctly and defeat the enemy before after answering 10 questions, to win.");
+
+        //Declaring the 2D array that will hold the set of questions to use.
+        String[][] strQuestions = new String[20][5];
+        //Loop for the current topic.
+        do
+        { 
+            //Initial setup calls "initialize" to ensure the string array is empty.
+            //  Stores nothing ("") in all spots in the 2D array.
+            initialize(strQuestions,"");
+            //Used in the random number generation and loop end detection.
+            int iNumQs = strQuestions.length;
+            //sets game over to false
+            gameOver = false;
+            //Get the user input for which topic to select.
+            int iSection = getInt("Please select the difficulty you want the questions to be based on:\n(1 - Easy, 2 - Medium, and 3 - Hard)", 1, 3);
+            //Randomly selects enemy name
+            String enemy = generateEnemyName();
+            //Shows the enemy
+            System.out.println("You encountered the "+enemy+" enemy");
+            //Randomly generates enemy health
+            enemyHealth = enemyHealthgenerator();
+            //Randomly generates user health
+            userHealth = userHealthgenerator();
+            //Resets question count
+            iQCount = 1;
+            //resets the answers being used
+            int[] currentAnswers ={0};
+            //Based on the topic number call the method and load the correct set of questions.
+            switch (iSection)
+            {
+                case 1:
+                    //Call method for section/topic 1
+                    fillArrayTopic1(strQuestions);
+                    //Uses easy answers
+                    currentAnswers = easyAnswers;
+                    break;
+                case 2:
+                    //Call method for section/topic 2
+                    fillArrayTopic2(strQuestions);
+                    //Uses medium answers
+                    currentAnswers = mediumAnswers;
+                    break;
+                case 3:
+                    //Call method for section/topic 3
+                    fillArrayTopic3(strQuestions);
+                    //Uses hard answers
+                    currentAnswers = hardAnswers;
+                    break;
+                default:
+                    //Should not happen -- but add any code for this situation here.
+            }
+
+            //Loop to do some random questions.
+            do{
+                //Select a random question.
+                int iRandQ = (int) (Math.random()*iNumQs);
+                while (iQCount <= iNumQs && strQuestions[iRandQ][0] == "")
+                {
+                    iRandQ = (iRandQ + 1) % iNumQs;
+                }
+                //Show the randomly selected question:
+                System.out.println("Question #" + iQCount + " -- " + strQuestions[iRandQ][0]);
+                //Clear that question so it is not selected again.
+                strQuestions[iRandQ][0] = "";
+                //Keeps track of the question number
+                iQCount++;
+                //This shows the four options (added a 5th column for the answers)
+                for (int i = 1; i < strQuestions[0].length; i++)
+                {
+                    //Displays the options -- you can add a "\n" for extra spacing.
+                    System.out.println("Option #" + i + ": " + strQuestions[iRandQ][i]);
+                }
+                //Ask the user to enter their answer
+                int userAnswer = getInt("Enter the number of the option you think is the correct answer:", 1, 4);
+                // calls the answer check methods depending on if the game is over/(if the user win or lost before answering 10 questions)
+                if (!gameOver) {
+                    checkAnswer(userAnswer, strQuestions, iRandQ, currentAnswers);
+                }else{
+                    checkAnswer2(userAnswer, strQuestions, iRandQ, currentAnswers);
+                }
+                //Keep looping if the user wants to see more.
+            }while(iQCount != 11 && getString("Would you like to continue (Enter y for 'yes' to see another question -- anything else exits.)", true, -1, -1).equalsIgnoreCase("y"));
+            //Shows the score at the end once the user has exited   
+            System.out.println("You answered "+score+"/"+attempts+" questions correctly.");
+            //Loop the whole thing if they wish to try another topic.
+        } while(getString("Would you like to select a different difficulty (Enter y for 'yes' to play again -- anything else exits.)", true, -1, -1).equalsIgnoreCase("y"));
+        //End of program message.
+        System.out.println("Thank you for playing!");
+    }
+    //checks if the user's answer is correct or incorrect and calls the other methods based depending on if the answer is correct or incorrect
+    public static void checkAnswer(int userAnswer, String[][] strQuestions, int iRandQ, int [] currentAnswers) {
+        //Checks the answers using the answer key array, based off the question generarted by the iRandQ variable
+        if ((userAnswer == currentAnswers[iRandQ])) {
+            dealDamage();
+            increaseUserHealth();
+            streak++;
+            checkStreak();
+            //Keeps track of score
+            score++;
+            //Keep track of attempts
+            attempts++;
+        } 
+        else 
+        {
+            increaseEnemyHealth();
+            dealUserDamage();
+            streak = 0;
+            attempts++;
+        }
+        checkGameOver();
+        System.out.println("Your health: " + userHealth + " Enemy health: " + enemyHealth);
+    }
+    // Answer check for when the game is over.
+    public static void checkAnswer2(int userAnswer, String[][] strQuestions, int iRandQ, int [] currentAnswers ) {
+        if ((userAnswer == currentAnswers[iRandQ])) {
+            System.out.println("Correct");
+            score++;
+            attempts++;
+        } 
+        else 
+        {
+            System.out.println("Incorrect");
+            attempts++;
+        }
+    }
+    //50% chance of random increase in the user"s health by a random number between 5-10
+    public static void increaseUserHealth() {
+        int chance = (int)(Math.random() * 101);
+        if (chance <= 25) {
+            int healthIncrease = (int)(Math.random() * 6) + 5;
+            userHealth += healthIncrease;
+            //shows that the user's health was increased
+            System.out.println("Your health increased by " + healthIncrease + ".");
+        }
+    }
+    // deals damage to the enemy randomly between 10-20
+    public static void dealDamage() {
+        int damage = (int)(Math.random() * 11 + 10) * damageMultiplier;
+        enemyHealth -= damage;
+        //shows how much damage was dealt and the damage multiplier
+        System.out.println("Correct! You dealt " + damage + " damage to the enemy with a damage multiplier of " + damageMultiplier + ".");
+    }
+    // Increases the damage multiplier by 1 once the user reaches a answer streak of 5
+    public static void checkStreak() {
+        if (streak % 5 == 0) {
+            damageMultiplier++;
+        }
+    }
+
+    // 50% chance of random increase in the enemy's health by 1-5
+    public static void increaseEnemyHealth() {
+        int chance = (int)(Math.random() * 101);
+        if (chance <= 10) {
+            int healthIncrease = (int)(Math.random() * 5) + 1;
+            enemyHealth += healthIncrease;
+            System.out.println("The enemy's health increased by " + healthIncrease + ".");
+        } else {
+            System.out.println("Incorrect.");
+        }
+    }
+    // deals damage to the user by 10-20
+    public static void dealUserDamage() {
+        int userDamage = (int)(Math.random() * 11 + 10);
+        userHealth -= userDamage;
+        System.out.println("You took " + userDamage + " damage from the enemy.");
+    }
+    //Checks and shows the game over outputs
+    public static void checkGameOver() {
+        if (enemyHealth <= 0) {
+            //shows the user that they won when enemy health is less/equal to 0
+            System.out.println("You have defeated the enemy!");
+            System.out.println("Game over! You can still answer questions but the health and damage will not be displayed.");
+            gameOver = true;
+        }
+        else if (iQCount == 10||userHealth <= 0) {
+            //shows the user that they lost when user health is less/equal to 0
+            System.out.println("You have been defeated!");
+            System.out.println("Game over! You can still answer questions but the health and damage will not be displayed.");
+            gameOver = true;
+        }
+    }
+    // randomly generates the enemy's name
+    public static String generateEnemyName() {
+        // contains the three name options
+        String[] enemyNames = {"Dragon", "Giant", "Monster"};
+        int randomIndex = (int)(Math.random() * enemyNames.length);
+        return enemyNames[randomIndex];
+    }
+    // randomly generates the user"s health between 50-60
+    public static int userHealthgenerator() {
+        userHealth = (int) (Math.random() * 11 + 50);
+        return userHealth;
+    }
+    // randomly generates the enemy"s health between 100-125
+    public static int enemyHealthgenerator() {
+        enemyHealth = (int) (Math.random() * 25 + 100);
+        return enemyHealth;
+    }
+    //This routine is here to initialize the 2 dimensional array to contain whatever initial starting string is sent as the second parameter.
+    private static void initialize(String grid[][], String strStart)
+    {
+        //Loop through the number of arrays (rows) there are.
+        for (int i = 0; i < grid.length; i++)
+        {
+            //Loop through the number of elements there are in each array (columns).
+            for (int j = 0; j < grid[0].length; j++)
+            {
+                //Put the start character in the current spot in the 2D array.
+                grid[i][j] = strStart;
+            }
+        }
+    }
+
+    //Loads the array sent in with the first topic content.(Easy)
+    private static void fillArrayTopic1(String strQs[][])
+    {
+        strQs[0][0] = "What is the \\n command used for"; //answer 1
+        strQs[0][1] = "Creates a new line";
+        strQs[0][2] = "Clears the terminal window";
+        strQs[0][3] = "Adds two spaces";
+        strQs[0][4] = "Starts a loop";
+        strQs[1][0] = "What is the System.out.println command used for"; //answer 1 
+        strQs[1][1] = "Prints text on a new line";
+        strQs[1][2] = "Add 1 to a integer value";
+        strQs[1][3] = "Subtracts 1 from a integer value ";
+        strQs[1][4] = "None of the above";
+        strQs[2][0] = "Which of the following is not a java keyword"; //answer 2
+        strQs[2][1] = "Static";
+        strQs[2][2] = "Try";
+        strQs[2][3] = "Integer";
+        strQs[2][4] = "New";
+        strQs[3][0] = "What is the appropriate data type for the value of 9.3"; //answer 4
+        strQs[3][1] = "String";
+        strQs[3][2] = "Integer";
+        strQs[3][3] = "Boolean";
+        strQs[3][4] = "Double";
+        strQs[4][0] = "What is the appropriate data type for a sentence ex: The quick brown fox jumps over the lazy dogs."; //answer 2
+        strQs[4][1] = "Integer";
+        strQs[4][2] = "String";
+        strQs[4][3] = "Float";
+        strQs[4][4] = "Boolean ";
+        strQs[5][0] = "What is command is used to state not equal to"; //answer 1 
+        strQs[5][1] = "!=";
+        strQs[5][2] = "||";
+        strQs[5][3] = "&&";
+        strQs[5][4] = "==";
+        strQs[6][0] = "What error will int num1 = 3.2 produce"; //answer 2 
+        strQs[6][1] = "Syntax Error";
+        strQs[6][2] = "Runtime Error";
+        strQs[6][3] = "Logic Error";
+        strQs[6][4] = "None";
+        strQs[7][0] = "What is error will int num1 = 3; double num2 = (float) num1; produce"; //answer 4 
+        strQs[7][1] = "Syntax Error";
+        strQs[7][2] = "Runtime Error";
+        strQs[7][3] = "Logic Error";
+        strQs[7][4] = "None";
+        strQs[8][0] = "What is the correct code to display Hello World"; //answer 1 
+        strQs[8][1] = "System.out.print(“Hello World”)";
+        strQs[8][2] = "print(“Hello World”)";
+        strQs[8][3] = "System.out.printline(“Hello World”)";
+        strQs[8][4] = "System.out.print(Hello World)";
+        strQs[9][0] = "Which datatype is used for characters"; //answer 2
+        strQs[9][1] = "Double";
+        strQs[9][2] = "Char";
+        strQs[9][3] = "Integer";
+        strQs[9][4] = "Boolean";
+        strQs[10][0] = "Which of the following is not a java keyword"; //answer 4 
+        strQs[10][1] = "Integer";
+        strQs[10][2] = "Switch";
+        strQs[10][3] = "If";
+        strQs[10][4] = "Then";
+        strQs[11][0] = "What does float X = 27/0 output"; // answer 2
+        strQs[11][1] = "Infinity";
+        strQs[11][2] = "Logic Error";
+        strQs[11][3] = "0";
+        strQs[11][4] = "1";
+        strQs[12][0] = "Evaluate the following int a = 5, b = 7, c = 3; ++a+c-b+b+a++;"; //answer 1
+        strQs[12][1] = "15";
+        strQs[12][2] = "22";
+        strQs[12][3] = "25";
+        strQs[12][4] = "21";
+        strQs[13][0] = "Which of the following is correct"; //answer 4
+        strQs[13][1] = "For (int i = 0… i++)";
+        strQs[13][2] = "For int i = 0; i>10; i++";
+        strQs[13][3] = "For (int i = 0; i/0 (i-10)";
+        strQs[13][4] = "For (int i = 10; i<100; i+=10)";
+        strQs[14][0] = "What will be the output of String StrVar = “Racecar”; System.out.println(StrVar.length());"; //answer 3
+        strQs[14][1] = "Error";
+        strQs[14][2] = "9";
+        strQs[14][3] = "7";
+        strQs[14][4] = "Racecar 7 times";
+        strQs[15][0] = "What is the appropriate data type for weight in lbs"; //answer 2 
+        strQs[15][1] = "Char";
+        strQs[15][2] = "Double";
+        strQs[15][3] = "String";
+        strQs[15][4] = "Boolean";
+        strQs[16][0] = "What is the appropriate data type for a name"; //answer 1
+        strQs[16][1] = "String";
+        strQs[16][2] = "Float";
+        strQs[16][3] = "Char";
+        strQs[16][4] = "Boolean";
+        strQs[17][0] = "Which of the following is true"; //answer 4
+        strQs[17][1] = "Public functions cannot be called";
+        strQs[17][2] = "Private functions can be used in all classes";
+        strQs[17][3] = "Public functions cannot be used in the class it was created in";
+        strQs[17][4] = "Private Functions cannot be used outside of their class";
+        strQs[18][0] = "What is the is the appropriate data type for the value of 0"; // answer 3 
+        strQs[18][1] = "Char";
+        strQs[18][2] = "Float";
+        strQs[18][3] = "Int";
+        strQs[18][4] = "Double";
+        strQs[19][0] = "What is the is the appropriate data type for the value of True"; //answer 3
+        strQs[19][1] = "Float";
+        strQs[19][2] = "String";
+        strQs[19][3] = "Boolean";
+        strQs[19][4] = "Char";
+    }
+    //Loads the array sent in with the second topic content.(Medium)
+    private static void fillArrayTopic2(String strQs[][])
+    {
+        strQs[0][0] = "What is the default value of a variable"; //answer 4
+        strQs[0][1] = "0";
+        strQs[0][2] = "null";
+        strQs[0][3] = "Not Declared";
+        strQs[0][4] = "Depends on the type of the variable";
+        strQs[1][0] = "What is the default value of integer variable"; //answer 3
+        strQs[1][1] = "0.0";
+        strQs[1][2] = "null";
+        strQs[1][3] = "0";
+        strQs[1][4] = "Not Declared";
+        strQs[2][0] = "What is the default value of a float variable"; //answer 2
+        strQs[2][1] = "0";
+        strQs[2][2] = "0.0";
+        strQs[2][3] = "null";
+        strQs[2][4] = "Not Declared";
+        strQs[3][0] = "Which of the following is correct"; //answer 2
+        strQs[3][1] = "public static int main(String[] args)";
+        strQs[3][2] = "public static void main(String[] args)";
+        strQs[3][3] = "public int main(String[] args)";
+        strQs[3][4] = "None";
+        strQs[4][0] = "Which of the following is correct"; //answer 4
+        strQs[4][1] = "int [] iArray = {“1”, “2”, “3”};";
+        strQs[4][2] = "int iArray1 [] = {1, 3, 5};";
+        strQs[4][3] = " int iArray [] [] = {1,2,3,4};";
+        strQs[4][4] = "int iArray [] = {1, 3, 5};";
+        strQs[5][0] = "Which of the following is true"; //answer 1
+        strQs[5][1] = "A class can contain static blocks"; 
+        strQs[5][2] = "A static block is run every time a variable is created";
+        strQs[5][3] = "Methods cannot contain static blocks";
+        strQs[5][4] = "Static blocks are declared inside of the method not in the heading";
+        strQs[6][0] = "What value does the String method compareTo() return"; //answer 1
+        strQs[6][1] = "a integer value";
+        strQs[6][2] = "the first character from each of the Strings";
+        strQs[6][3] = "null";
+        strQs[6][4] = "the last character from each of the Strings";
+        strQs[7][0] = "Which of the following is correct"; //answer 4
+        strQs[7][1] = "StrVar.Equals()";
+        strQs[7][2] = "StrVar.isEquals()";
+        strQs[7][3] = "StrVar.IsEquals()";
+        strQs[7][4] = "StrVar.equals()";
+        strQs[8][0] = "Which of the following is correct"; //answer 2
+        strQs[8][1] = "StrVar.char()";
+        strQs[8][2] = "StrVar.charAt()";
+        strQs[8][3] = "StrVar.charat()";
+        strQs[8][4] = "StrVar.Char()";
+        strQs[9][0] = "What value is returned by compareTo() if the string is less than"; //answer 4
+        strQs[9][1] = "0";
+        strQs[9][2] = "1";
+        strQs[9][3] = "Any value greater than 0";
+        strQs[9][4] = "Any value less than 0";
+        strQs[10][0] = "What datatype is returned by equals()"; //answer 2
+        strQs[10][1] = "char";
+        strQs[10][2] = "boolean";
+        strQs[10][3] = "int";
+        strQs[10][4] = "float";
+        strQs[11][0] = "Which of the following removes whitespaces"; //answer 3
+        strQs[11][1] = "indexOf()";
+        strQs[11][2] = "length()";
+        strQs[11][3] = "trim()";
+        strQs[11][4] = "None of the above";
+        strQs[12][0] = "Which of the following is used to extract a string"; //answer 1
+        strQs[12][1] = "substring()";
+        strQs[12][2] = "replace()";
+        strQs[12][3] = "concat()";
+        strQs[12][4] = "charAt()";
+        strQs[13][0] = "Which of the following is used to get the number of characters in a string "; //answer 3
+        strQs[13][1] = "charInt";
+        strQs[13][2] = "convert()";
+        strQs[13][3] = "length()";
+        strQs[13][4] = "count()";
+        strQs[14][0] = "Which of the following is correct"; //answer 2
+        strQs[14][1] = "int[] array1 = new int[3];";
+        strQs[14][2] = "int array1[] = new int[3];";
+        strQs[14][3] = "Both 1&2";
+        strQs[14][4] = "None of the above";
+        strQs[15][0] = "What is the return type of a method that does not return a value"; //answer 4
+        strQs[15][1] = "int";
+        strQs[15][2] = "String";
+        strQs[15][3] = "Char";
+        strQs[15][4] = "Void";
+        strQs[16][0] = "Which of the following generates a integer between 0-1"; //answer 1
+        strQs[16][1] = "(int)(Math.random() + 0.5)";
+        strQs[16][2] = "(int)Math.random() + 1";
+        strQs[16][3] = "(int)(Math.random() + 0.2)";
+        strQs[16][4] = "(int)Math.random()";
+        strQs[17][0] = "What is the default value of a String variable"; //answer 3
+        strQs[17][1] = "0";
+        strQs[17][2] = "true";
+        strQs[17][3] = "null";
+        strQs[17][4] = "None of the above";
+        strQs[18][0] = "What is the output of int [ ] iNum = {1,2,3,4,5,6}; System.out.println((iNum[1] + iNum[3]));"; //answer 3
+        strQs[18][1] = "1";
+        strQs[18][2] = "4";
+        strQs[18][3] = "6";
+        strQs[18][4] = "8";
+        strQs[19][0] = "What loop will display each of the numbers in this array on a separate line: int [ ] iNum = {1, 2, 3};"; //answer 1
+        strQs[19][1] = "For (int i = 1; i < 3; i++) System.out.println(iNum[i]);";
+        strQs[19][2] = "For (int i = 0; i < 3; i++) System.out.println( iNums[i]);";
+        strQs[19][3] = "For (int i = 3; i > 1; i--) System.out.println( iNums[i])";
+        strQs[19][4] = "None of the above";
+    }
+    //Loads the array sent in with the third topic content.(Hard)
+    private static void fillArrayTopic3(String strQs[][])
+    {
+        strQs[0][0] = "If StrVarA = The; StrVarB =  brown; StrVarC = fox; Result = The brown fox; Which of the following is correct ";
+        strQs[0][1] = "Result = StrVarA+StrVarB-StrVarC;";
+        strQs[0][2] = "concat( StrVarA, StrVarB, StrVarC );";
+        strQs[0][3] = "Result = StrVarA.concat( StrVarB.concat( StrVarC ) );";
+        strQs[0][4] = "Result = concat(StrVarA).concat(StrVarB).concat(StrVarC);";
+        strQs[1][0] = "What is the returned in value in this program: public static int getxValue() {int x; x = 23; if (x < 50) { return 50; return v;}";
+        strQs[1][1] = "0";
+        strQs[1][2] = "23";
+        strQs[1][3] = "50";
+        strQs[1][4] = "100";
+        strQs[2][0] = "How many values are returned in this method: public static void testMethod(int iNum) { }";
+        strQs[2][1] = "0";
+        strQs[2][2] = "1";
+        strQs[2][3] = "2";
+        strQs[2][4] = "3";
+        strQs[3][0] = "In this method what type of value is being returned public static int testMethod(int counter, double num1) {     return 4; }";
+        strQs[3][1] = "void";
+        strQs[3][2] = "int";
+        strQs[3][3] = "double";
+        strQs[3][4] = "char";
+        strQs[4][0] = "How many parameters are in this method: public static int square(int iNum)";
+        strQs[4][1] = "0";
+        strQs[4][2] = "1";
+        strQs[4][3] = "2";
+        strQs[4][4] = "3";
+        strQs[5][0] = "What will the this program output: {char x = 65; System.out.println('x = ' + x);";
+        strQs[5][1] = "Error";
+        strQs[5][2] = "c = 65";
+        strQs[5][3] = "c = b";
+        strQs[5][4] = "c = A"; 
+        strQs[6][0] = "What is the correct output:  String StrVar1 = 'abc';String StrVar2 = 'abc';StrVar1.concat(StrVar2); System.out.print(StrVar1); ";
+        strQs[6][1] = "StrVar1";
+        strQs[6][2] = "null";
+        strQs[6][3] = "abcabc";
+        strQs[6][4] = "abc"; 
+        strQs[7][0] = "What is the correct output: String StrVar1 = 'abc';String StrVar2 = 'abc';System.out.println('StrVar1 == StrVar2 is:' + StrVar1 == StrVar2);";
+        strQs[7][1] = "StrVar1 == StrVar2 is abc";
+        strQs[7][2] = "True";
+        strQs[7][3] = "False";
+        strQs[7][4] = "Error";
+        strQs[8][0] = "What is the correct output:{int[]  num1 = {120, 200, 016};for(int i = 0; i < num1.length; i++){System.out.print(num1[i] + “ “);";
+        strQs[8][1] = "120 200 016";
+        strQs[8][2] = "016 120 200";
+        strQs[8][3] = "200 110 016";
+        strQs[8][4] = "120 200 014";
+        strQs[9][0] = "What is the output: int[][] testArray = {{1,2,3}, {4,5,6}, {7,8,9}};System.out.println(testArray[1][1]);";
+        strQs[9][1] = "1";
+        strQs[9][2] = "2";
+        strQs[9][3] = "5";
+        strQs[9][4] = "none of the above";
+        strQs[10][0] = "What is the output: int[] testArray = {1,2,3,4,5};for(int i=0; i<testArray.length; i++)System.out.print(testArray[i]+' ');";
+        strQs[10][1] = "1 2 3 4 5";
+        strQs[10][2] = "5 4 3 2 1";
+        strQs[10][3] = "0 1 2 3 4";
+        strQs[10][4] = "None of the above";
+        strQs[11][0] = "Which of the following Java methods can be used to compare two strings lexicographically";
+        strQs[11][1] = "compare()";
+        strQs[11][2] = "equals()";
+        strQs[11][3] = "compareTo()";
+        strQs[11][4] = "equalsIgnoreCase()";
+        strQs[12][0] = "Which of the following Java methods is used to return the length of an array";
+        strQs[12][1] = "length()";
+        strQs[12][2] = "size()";
+        strQs[12][3] = "getLength()";
+        strQs[12][4] = "getSize()";
+        strQs[13][0] = "What is the output of the following program: int[] num1 = {1, 2, 3};for (int i = 0; i < 3; i++) {num1[i]++}System.out.println(num1[0] + ' ' + num1[1] + ' ' + num1[2]);";
+        strQs[13][1] = "1 2 3";
+        strQs[13][2] = "2 3 4";
+        strQs[13][3] = "0 1 2";
+        strQs[13][4] = "1 1 1";
+        strQs[14][0] = "What is the output of the following program: \nint[] num1 = {1, 2, 3, 4}\nint sum = 0;\nfor (int i = 0; i < num1.length; i++) {\nif (i % 2 == 0) {\nsum += num1[i];}\n}System.out.println(sum);";
+        strQs[14][1] = "4";
+        strQs[14][2] = "6";
+        strQs[14][3] = "8";
+        strQs[14][4] = "10";
+        strQs[15][0] = "What is the output of the following program: \nString[] words = {'the','quick','brown','fox'};\nString sentence = '';\nfor(int i = 0; i < words.length; i++){\nsentence += words[i] + ' ';}\nSystem.out.println(sentence);";
+        strQs[15][1] = "the quick brown fox";
+        strQs[15][2] = "quick brown fox the";
+        strQs[15][3] = "fox brown quick the";
+        strQs[15][4] = "brown fox the quick";
+        strQs[16][0] = "What is the output of the following program: \nint[] num1 = {1, 2, 3};\nint[] num2 = {4, 5, 6};\nfor (int i = 0; i < num1.length; i++) {\nnum1[i] += num2[i];\n}System.out.println(num1[0] + ' ' + num1[1] + ' ' + num1[2]);";
+        strQs[16][1] = "1 2 3";
+        strQs[16][2] = "4 5 6";
+        strQs[16][3] = "5 7 9";
+        strQs[16][4] = "9 11 13";
+        strQs[17][0] = "What is the output of the following program: \nint[] num1 = {1, 2, 3, 4}; \nfor (int i = 0; i < num1.length / 2; i++) {\nint temp = num1[i];num1[i] = num1[num1.length - 1 - i];num1[num1.length - 1 - i] = temp;}\n System.out.print(num1[0] + ' ' + num1[1] + '  + num1[2] + ' ' + num1[3]);";
+        strQs[17][1] = "1 2 3 4";
+        strQs[17][2] = "4 3 2 1";
+        strQs[17][3] = "1 4 2 3";
+        strQs[17][4] = "4 1 3 2";
+        strQs[18][0] = "What is the output of the following program: \nString[] StrVar = {'apple', 'banana', 'cherry'};\nfor(int i = 0; i < StrVar.length; i++){\narr[i] = StrVar[i].toUpperCase();}\nSystem.out.println(StrVar[1]);";
+        strQs[18][1] = "apple";
+        strQs[18][2] = "BANANA";
+        strQs[18][3] = "cherry";
+        strQs[18][4] = "Banana";
+        strQs[19][0] = "What is the output of the following program: \nString[] StrVar = {'Hello, 'world', 'how', 'are', 'you'};\nint count = 0;for(int i = 0; i < StrVar.length; i++){\nif(StrVar[i].length() > 3){count++;}\nSystem.out.println(count);:";
+        strQs[19][1] = "1";
+        strQs[19][2] = "2";
+        strQs[19][3] = "3";
+        strQs[19][4] = "4";           
+    }
+    /****************************************************************************************************************
+     * BELOW THIS LINE IS MR. HUDSON'S 'HELPING' CODE
+     * Each routine below is commented -- so read for full understanding, here is a short description of each
+     * routine included below:
+     * pauseToContinue - used to pause the program and then the user presses enter to continue.
+     * getString - used to get String input from the user.
+     * getInt - used to get a valid integer input from the user.
+     * getDbl - used to get a valid double (decimal values) input from the user.
+     * checkNum - used to verify a string only has numeric values in it.
+     * checkIntNum - used to check if a string value is a valid number within an integer range.
+     * checkDblNum - used to check if a string value is a valid number within a double range.
+     ****************************************************************************************************************/
+    /**
+     * This is a 'pause' routine to allow the user to just hit "enter" to continue with your
+     * programs can be used in multiple ways/locations. You can send in a message to the user
+     * and whether you want to clear the screen 'flush' before continuing.
+     */
+    public static void pauseToContinue(String message, boolean clearBeforeContinue)
+    {
+        //This is just to allow the user to review anything on screen
+        //  before clearing the screen and returning them to the main menu.
+        getString(message, true, -1, -1);
+        if (clearBeforeContinue) {
+            //These next two lines will clear the terminal window in BlueJ and will
+            //also clear the execution area on Repl.it or GDB online. (Fully explained above.)
+            System.out.print("\033[H\033[2J\f");
+            System.out.flush();
+        }
+    } 
+
+    /**
+     * This is used to get a valid string input from the user, used whenever I need user input. 
+     * You send in the sMessage containing what you are asking the user for, next is a boolean value as to whether
+     * an empty string is okay input or not (emptyOK -- true means an empty string is fine, false means need something).
+     * You can also send in a minimum or maximum length needed for the string -- if -1 is sent for either then 
+     * the length of the string is not checked. In the end the return value is a string based on the criteria sent.
+     */
+    public static String getString(String sMessage, boolean emptyOK, int intMinChar, int intMaxChar)
+    {
+        //Setup the scanner for user input via the keyboard.
+        Scanner keyInput = new Scanner(System.in); 
+
+        //Temp string to hold user's input until it is valid
+        String strTemp = "";
+        //Boolean variable to know whether we can end the user input loop.
+        boolean blnLeaveLoop;
+        do
+        {
+            //Getting the user's input to be stored in the strTemp variable.
+            System.out.println(sMessage);
+            strTemp = keyInput.nextLine();
+            //Make the assumption that the input is good -- switch to false if there is an issue.
+            blnLeaveLoop = true;
+            //Checking if empty string (and whether we need to check this).
+            if (strTemp.length() == 0 && !emptyOK)
+            {
+                System.out.println("You need to enter something!");
+                blnLeaveLoop = false;
+            }
+            //Checking if they care about how short the string is (minimum number of characters).
+            if (intMinChar != -1 && strTemp.length() < intMinChar)
+            {
+                System.out.println("Your input needs to have at least " + intMinChar + " characters.");
+                blnLeaveLoop = false;
+            }
+            //Checking if they care about how long the string is (maximum number of characters).
+            if (intMaxChar != -1 && strTemp.length() > intMaxChar)
+            {
+                System.out.println("Your input needs to have less than or equal to " + intMaxChar + " characters.");
+                blnLeaveLoop = false;
+            }
+        } while (!blnLeaveLoop);
+
+        //************************************************************************************************************
+        //NOTE -- if you get an error in an online environment -- comment out the code line below.
+        //************************************************************************************************************
+        //keyInput.close();
+        //Out of the input loop now -- so return the input -- it meets the requirements.
+        return strTemp;
+    }
+
+    /**
+     * This is used to get input from the user in the form of an integer. A message is sent to this routine
+     * asking the user for integer input. A lowNum value should be sent as the lowest number allowed as well as
+     * a highNum value is sent to represent the largest value allowed as input. In the end a valid integer is
+     * returned based on the parameters sent in and outlined.
+     */
+    public static int getInt(String sMessage, int lowNum, int highNum)
+    {
+        //Temp string to hold the user's input until it is valid.
+        String strTemp = "";
+        //Boolean to keep user in loop until input is valid
+        boolean blnValidInput = true;
+        //Loop to ensure the user enters an integer and in the correct range.
+        do
+        {
+            //Getting input -- by calling my getString routine, I send in the message to ask the user as well as false
+            //  for not allowing an empty string. The next two parameters use the length of the range values sent
+            //  to determine the length of the string input.
+            strTemp = getString(sMessage, false, 1, Math.max(Integer.toString(lowNum).length(),Integer.toString(highNum).length()));
+            //Using the checkInt routine to verify a number.
+            if (checkNum(strTemp,0))
+            {
+                //Checking the number is in the right range.
+                if (checkIntNum(strTemp, lowNum, highNum))
+                {
+                    blnValidInput = true;
+                }
+                else
+                {
+                    //It's not so let the user know.
+                    System.out.println("Please enter a value between " + lowNum + " and " + highNum + ".");
+                    blnValidInput = false;
+                }
+            }
+            else
+            {
+                //If it got here there's other issues -- like not being a valid integer.
+                System.out.println("Your input: " + strTemp + " is not a valid integer, please read carefully and try again.");
+                blnValidInput = false;
+            }
+        } while (!blnValidInput);
+        //Done the input loop -- send back the valid integer input.
+        return Integer.parseInt(strTemp);
+    }
+
+    /**
+     * This is used to get input from the user in the form of a double. A message is sent to this routine
+     * asking the user for decimal numeric input. A lowNum value should be sent as the lowest number
+     * allowed as well as a highNum value is sent to represent the largest value allowed as input. In the
+     * end a valid double value is returned based on the parameters sent in and outlined.
+     */
+    public static double getDbl(String sMessage, double lowNum, double highNum)
+    {
+        //Temp string to hold the user's input until it is valid.
+        String strTemp = "";
+        //Boolean to keep user in loop until input is valid
+        boolean blnValidInput = true;
+        //Loop to ensure the user enters an integer and in the correct range.
+        do
+        {
+            //Getting input -- by calling my getString routine, I send in the message to ask the user as well as false
+            //  for not allowing an empty string. The next two parameters use the length of the range values sent
+            //  to determine the length of the string input.
+            strTemp = getString(sMessage, false, 1, 3*Math.max(Double.toString(lowNum).length(),Double.toString(highNum).length()));
+            //Using the checkInt routine to verify a number.
+            if (checkNum(strTemp,1))
+            {
+                //Checking the number is in the right range.
+                if (checkDblNum(strTemp, lowNum, highNum))
+                {
+                    blnValidInput = true;
+                }
+                else
+                {
+                    //It's not so let the user know.
+                    System.out.println("Please enter a value between " + lowNum + " and " + highNum + ".");
+                    blnValidInput = false;
+                }
+            }
+            else
+            {
+                //If it got here there's other issues -- like not being a valid integer.
+                System.out.println("Your input: " + strTemp + " is not a valid integer, please read carefully and try again.");
+                blnValidInput = false;
+            }
+        } while (!blnValidInput);
+        //Done the input loop -- send back the valid integer input.
+        return Double.parseDouble(strTemp);
+    }
+
+    /** 
+     * This is used to error check a string value (sNum sent to the function) to verify that it is an integer  
+     * style number (no decimals). It will receive a string value to check and will return true or false 
+     * based on its validity in terms of being an integer.
+     */
+    public static boolean checkNum(String sNum, int numDecimals)
+    {
+        //Initialize the valid input to false -- assume bad data first and then change if all is good.
+        boolean validInput = false;
+        //Counters and variables to check for integer validity.
+        //  posNegCount keeps track of how many + or - characters are in the string.
+        //  posNegPos keeps track of the last position of a + or - found -- should only be 0.
+        //  decimalCount keeps track of the number of '.' entered -- should stay at 0 for integers
+        //  nonNumCount keeps track of how many non numeric characters there were -- should be 0 for numbers.
+        int posNegCount = 0, posNegPos = -1, decimalCount = 0, nonNumCount = 0;
+
+        //Loop to look at all the characters in the string input and update the counter variables as appropriate.
+        for (int i = 0; i < sNum.length();i++)
+        {
+            //Based on what the current character is do....
+            switch (sNum.charAt(i))
+            {
+                    //Current character is a decimal -- so add one to that counter.
+                case '.':
+                    decimalCount++;
+                    break;
+                    //Current character is a + or - sign -- so add one to that counter and update the position
+                    //  where it was found.
+                case '-':
+                case '+':
+                    posNegCount++;
+                    posNegPos = i;
+                    break;
+                    //Current character is a numeric value so do nothing it's okay nothing to do here.
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    break;
+                    //Anything else caught here is a non-numeric character (at least for this program's purposes).
+                default:
+                    nonNumCount++;
+            }
+        }
+        //Now check the results to see if it was valid -- need 1 or 0 +/- sign characters and they can only
+        //  occur in position 0 of the input.
+        if (posNegCount <= 1 && posNegPos <= 0)
+        {
+            //We want to ensure there were no non-numeric characters
+            if (nonNumCount <= 0)
+            {
+                //We want there to be 0 decimal points for integers, maximum 1 for doubles.
+                if (decimalCount <= numDecimals)
+                {
+                    //Can't allow just 1 + (or -) sign or 1 decimal point, causing the program to crash.
+                    if (!(posNegCount == 1 && sNum.length() == 1) && !(decimalCount == 1 && sNum.length() == 1))
+                    {
+                        //If we make it here, all is good. It's an integer style number.
+                        validInput = true;
+                    }
+                }
+            }
+        }
+        //Send back the validity of the string in terms of it being an integer or not.
+        return validInput;
+    }
+
+    /**
+     * This is used to verify that information sent to this function is a valid integer within a specified
+     * range.  Sent to this routine are:  the string version of the number to check (sNum), the lowest value
+     * allowed for the number (lowNum), the high value allowed for the number (highNum). Returns true or false
+     * as to the validity of the 'sNum' sent to the function.
+     */
+    public static boolean checkIntNum(String sNum, int lowNum, int highNum)
+    {
+        //Temp long to hold the string's value for size checking.
+        long lngTemp = 0;
+        //Boolean to hold whether the input is valid.
+        boolean blnValidInput = true;
+        //Using the checkInt routine to verify a number.
+        if (checkNum(sNum,0))
+        {
+            //Storing the number -- as a long temporarily to allow for overflow on the integer datatype.
+            //  Hopefully the programmer using this code set appropriate limit values and by the end
+            //  can successfully return an integer value.
+            lngTemp = Long.parseLong(sNum);
+            //Checking the number is in the right range.
+            if (lngTemp < lowNum || lngTemp > highNum)
+            {
+                blnValidInput = false;
+            }
+            //All good -- return true
+            else
+            {
+                blnValidInput = true;
+            }
+        }
+        //Was not a valid number (integer)
+        else
+        {
+            blnValidInput = false;
+        } 
+        //return the status of the input.
+        return blnValidInput;
+    }
+
+    /**
+     * This is used to verify that information sent to this function is a valid double within a specified
+     * range.  Sent to this routine are:  the string version of the number to check (sNum), the lowest value
+     * allowed for the number (lowNum), the high value allowed for the number (highNum). Returns true or false
+     * as to the validity of the 'sNum' sent to the function.
+     */
+    public static boolean checkDblNum(String sNum, double lowNum, double highNum)
+    {
+        //Temp long to hold the string's value for size checking.
+        double dblTemp = 0;
+        //Boolean to hold whether the input is valid.
+        boolean blnValidInput = true;
+        //Using the checkInt routine to verify a number.
+        if (checkNum(sNum,1))
+        {
+            //Storing the number -- as a long temporarily to allow for overflow on the integer datatype.
+            //  Hopefully the programmer using this code set appropriate limit values and by the end
+            //  can successfully return an integer value.
+            dblTemp = Double.parseDouble(sNum);
+            //Checking the number is in the right range.
+            if (dblTemp < lowNum || dblTemp > highNum)
+            {
+                blnValidInput = false;
+            }
+            //All good -- return true
+            else
+            {
+                blnValidInput = true;
+            }
+        }
+        //Was not a valid number (integer)
+        else
+        {
+            blnValidInput = false;
+        } 
+        //return the status of the input.
+        return blnValidInput;
+    }
+}
